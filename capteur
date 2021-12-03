@@ -1,0 +1,47 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import sys,math
+
+from yocto_api import *
+from yocto_anbutton import *
+
+errmsg=YRefParam()
+
+# Setup the API to use local USB devices
+if YAPI.RegisterHub("usb", errmsg)!= YAPI.SUCCESS:
+    sys.exit("init error"+errmsg.value)
+
+# find any AnButtom function
+channel = YAnButton.FirstAnButton()
+if channel is None : sys.exit('No module connected')
+
+# then find the first channel of the matching module
+serial=channel.get_module().get_serialNumber()
+channel1 = YAnButton.FindAnButton(serial + '.anButton1')
+
+historic     = []
+stdDev       = 0
+
+# you might need to adjust these thresholds
+historicSize = 30
+level        = 2.0
+
+while True:
+  value= channel1.get_rawValue()
+  historic.append(value)
+  if len(historic)>historicSize:  historic.pop(0)
+  l = len(historic)
+  if  (l==historicSize):
+    avg  = 0
+    avg2 = 0
+    for v in historic:
+        avg+= v
+        avg2+= v*v
+    avg = avg / l
+    avg2 = avg2 / l
+    stdDev = math.sqrt(math.fabs(avg2 - avg*avg))
+    if (stdDev>level):
+        print("It's raining")
+    else:
+        print("It's not raining")
+  YAPI.Sleep(10)
